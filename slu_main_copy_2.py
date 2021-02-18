@@ -3,6 +3,7 @@ import time
 import socket
 import argparse
 import json
+import threading
 from SbusParser import SbusParser
 
 
@@ -19,7 +20,7 @@ if slu is None:
 	print("Error: please specify slu unit")
 	quit()
 
-ser = serial.Serial(slu)  
+ser = serial.Serial(slu, timeout=0)  
 
 ###################################################################################
 
@@ -58,9 +59,9 @@ time.sleep(2)
 
 ser.write(initialize().encode())
 
-ser.write(set_drive_mode(0).encode())
+ser.write(set_drive_mode(1).encode())
 
-ser.write(set_velocity_absolutely(10000).encode())
+ser.write(set_velocity_absolutely(0).encode())
 
 ser.write(set_acceleration_absolutely(acceleration).encode())
 
@@ -68,8 +69,24 @@ ser.write(set_acceleration_absolutely(acceleration).encode())
 channels = SbusParser()
 
 first = True
-old_ch8 = channels.prev_ch8
 
+latest_position = 0
+def read_from_serial_port(ser):
+	global latest_position
+
+	while True:
+		serial_fb = ser.readline().decode()
+		# print(serial_fb)
+		try:
+			if (len(serial_fb) > 0) and (int(serial_fb) != 0):
+				latest_position = int(serial_fb)
+				# print("serial_fb: " + str(serial_fb) + "          len: "+ str(len(serial_fb)))
+		except:
+			pass
+
+
+thread = threading.Thread(target=read_from_serial_port, args=(ser,))
+thread.start()
 
 while True:
 	
@@ -113,46 +130,50 @@ while True:
 		except Exception as e:
 			print(e)
 	elif moab_pkt:
-
 		channels.parse_packet(moab_pkt)
 		print(channels.__dict__)
 		ch3 = channels.prev_ch3
-		ch8 = channels.prev_ch8
-
-		if first:
-			old_ch8 = channels.prev_ch8
-			first = False
-
-
+		ch6 = channels.prev_ch6
 		try:
-
-			# move stepwise with ch H
-			if ch8 > old_ch8 + 50:
-				ser.write(set_position_relatively(5000).encode())
-				ser.write(wait().encode())
-			elif ch8 < old_ch8 - 50:
-				ser.write(set_position_relatively(-5000).encode())
-				ser.write(wait().encode())
-			else:
-				pass
-
-			old_ch8 = ch8
-
-			"""# move with right stick ch C
+			if ch6 > 1500:
+				ser.write(initialize().encode())
+				time.sleep(2)
+			# move with right stick ch C
 
 			if  ch3 < channel_trim-deadband_width:
-				print("down")
+				# print("down")
 				ser.write(set_velocity_absolutely((ch3-channel_trim) * speed_factor).encode())
 			elif ch3 > channel_trim+deadband_width:
-				print("up")
+				# print("up")
 				ser.write(set_velocity_absolutely((ch3-channel_trim) * speed_factor).encode())
 			else:
-				print("stay")
-				ser.write(set_velocity_absolutely(0).encode())"""
+				# print("stay")
+				ser.write(set_velocity_absolutely(0).encode())
 
 		
 		except Exception as e:
 			print(e)
 
+	# ser.flush()
+	ser.write(get_position().encode())
+	"""serial_fb = None
+	try:
+		while True:
+
+			serial_fb = ser.readline().decode()
+			print(serial_fb)
+
+			if (len(serial_fb) == 0) or (serial_fb != "0"):
+				break
+
+			# pkt = data.decode()
+	except:
+		serial_fb = serial_fb"""
+	
+
+	# serial_fb = ser.readline().decode()
+	print(latest_position)
+
 	time.sleep(0.05)
+
 

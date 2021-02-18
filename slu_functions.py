@@ -30,7 +30,8 @@ def set_position_absolutely(abs_pos):
 
 def get_position():
     data = f'gp,1\n'
-    ser.write(data.encode())
+    return data
+    # ser.write(data.encode())
     # 書式(text) ：gp,[axis](delim)
     #  Return ：1000(ret)
     # 解説：軸の現在位置を問い合わせる
@@ -56,7 +57,8 @@ def set_velocity_absolutely(sva):
 
 def get_velocity():
     data = f'gv,1\n'
-    ser.write(data.encode())
+    return data
+    # ser.write(data.encode())
     # 書式(text) ：gv,[axis](delim)
     # Return ：1000(ret)
     # 解説：軸の現在速度を問い合わせる。戻り値は steps/sec
@@ -73,7 +75,8 @@ def set_velocity_relatively(svr):
 
 def stop_all() :
     data = f'sta,1\n'
-    ser.write(data.encode())
+    return data
+    # ser.write(data.encode())
     # 書式(text) ：sta,[axis](delim)
     # Return ：0(ret)
     # 解説：全ての回転軸を停止する。
